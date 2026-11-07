@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -6,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Олимпиада: Микробиология</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Подключаем официальный скрипт Telegram Web App SDK -->
     <script src="https://telegram.org"></script>
 </head>
 <body>
@@ -19,38 +17,50 @@
 </div>
 
 <script>
-    // Инициализируем Telegram Web App
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand(); // Расширяем мини-приложение на весь экран смартфона
+    // Безопасная инициализация Telegram WebApp
+    let tg = null;
+    if (window.Telegram && window.Telegram.WebApp) {
+        tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+    }
 
     let questions = [];
     let currentQuestionIndex = 0;
     let score = 0;
 
-    // Загружаем нашу базу данных вопросов
-    // Стало:
-fetch('./questions.json')
-        .then(response => response.json())
+    // Загрузка базы вопросов с защитой от кэширования
+    fetch('./questions.json?v=' + Date.now())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Статус ответа: ' + response.status);
+            }
+            return response.json();
+        })
         .then(data => {
-            // Перемешиваем вопросы случайным образом
-            questions = data.sort(() => Math.random() - 0.5);
-            startQuiz();
+            // Очищаем базу от пустых строк
+            questions = data.filter(q => q && q.question && q.options && q.options.length > 0);
+            
+            if (questions.length === 0) {
+                document.getElementById('question').innerText = "База вопросов пуста или повреждена.";
+                return;
+            }
+            
+            // Перемешиваем случайным образом
+            questions.sort(() => Math.random() - 0.5);
+            
+            // Стартуем квиз
+            currentQuestionIndex = 0;
+            score = 0;
+            showQuestion();
         })
         .catch(err => {
-            document.getElementById('question').innerText = "Ошибка загрузки базы данных.";
+            document.getElementById('question').innerText = "Ошибка загрузки базы: " + err.message;
             console.error(err);
         });
 
-    function startQuiz() {
-        currentQuestionIndex = 0;
-        score = 0;
-        showQuestion();
-    }
-
     function showQuestion() {
-        const qBtn = document.getElementById('next-btn');
-        qBtn.style.display = 'none'; // Скрываем кнопку "Далее" до выбора ответа
+        document.getElementById('next-btn').style.display = 'none';
         
         const questionElement = document.getElementById('question');
         const optionsContainer = document.getElementById('options');
@@ -62,7 +72,6 @@ fetch('./questions.json')
         progressElement.innerText = `Вопрос ${currentQuestionIndex + 1} из ${questions.length}`;
         questionElement.innerText = currentQuestion.question;
         
-        // Создаем кнопки для каждого варианта ответа
         currentQuestion.options.forEach((option, index) => {
             const button = document.createElement('button');
             button.innerText = option;
@@ -77,25 +86,22 @@ fetch('./questions.json')
         const optionsContainer = document.getElementById('options');
         const buttons = optionsContainer.getElementsByClassName('option-btn');
         
-        // Блокируем остальные кнопки после выбора
         for (let btn of buttons) {
             btn.disabled = true;
         }
         
-        // Подсвечиваем правильный и неправильный ответы
         if (selectedIndex === currentQuestion.correct_option_index) {
             clickedButton.classList.add('correct');
             score++;
-            // Легкая вибрация телефона при успехе (фишка Telegram)
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         } else {
             clickedButton.classList.add('wrong');
-            // Показываем пользователю, где был правильный ответ
-            buttons[currentQuestion.correct_option_index].classList.add('correct');
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+            if (currentQuestion.correct_option_index >= 0 && currentQuestion.correct_option_index < buttons.length) {
+                buttons[currentQuestion.correct_option_index].classList.add('correct');
+            }
+            if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
         }
         
-        // Показываем кнопку перехода к следующему вопросу
         document.getElementById('next-btn').style.display = 'block';
     }
 
@@ -104,8 +110,7 @@ fetch('./questions.json')
         if (currentQuestionIndex < questions.length) {
             showQuestion();
         } else {
-            // Если вопросы кончились
-            document.getElementById('question').innerText = `Тест завершен! Ваш результат: ${score} из ${questions.length}`;
+            document.getElementById('question').innerText = `Тест завершен! Результат: ${score} из ${questions.length}`;
             document.getElementById('options').innerHTML = '';
             document.getElementById('next-btn').style.display = 'none';
         }
