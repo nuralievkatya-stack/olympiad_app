@@ -1,0 +1,88 @@
+/* style.css */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f4f5f6;
+    color: #000000;
+    margin: 0;
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+}
+
+.quiz-container {
+    max-width: 500px;
+    width: 100%;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    box-sizing: border-box;
+}
+
+.progress-bar {
+    font-size: 14px;
+    color: #707579;
+    margin-bottom: 12px;
+}
+
+.question-text {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    line-height: 1.4;
+}
+
+.options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.option-btn {
+    background: #f4f5f6;
+    color: #000000;
+    border: 1px solid #e1e4e6;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 16px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    display: block;
+    box-sizing: border-box;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.option-btn:hover {
+    background: #ebedf0;
+}
+
+/* ЦВЕТА ИНДИКАЦИИ ОТВЕТОВ */
+.option-btn.correct {
+    background-color: #43a047 !important;
+    color: #ffffff !important;
+    border-color: #43a047 !important;
+}
+
+.option-btn.wrong {
+    background-color: #e53935 !important;
+    color: #ffffff !important;
+    border-color: #e53935 !important;
+}
+
+.next-btn {
+    margin-top: 20px;
+    width: 100%;
+    padding: 14px;
+    border: none;
+    background-color: #2481cc;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    display: none;
+}
