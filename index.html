@@ -4,20 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Олимпиада: Микробиология</title>
-    <link rel="stylesheet" href="style.css?v=2">
+    <!-- v=6 принудительно сбросит старый кэш в браузере -->
+    <link rel="stylesheet" href="style.css?v=6">
     <script src="https://telegram.org"></script>
 </head>
 <body>
 
 <div class="quiz-container">
-    <div class="progress-bar" id="progress">Вопрос 0 из 0</div>
+    <!-- Умная панель прогресса и статистики -->
+    <div class="dashboard">
+        <div class="progress-text" id="progress">Вопрос 0 из 0</div>
+        <div class="stats-counter">
+            <span class="stat-badge correct-badge">✅ <span id="correct-count">0</span></span>
+            <span class="stat-badge wrong-badge">❌ <span id="wrong-count">0</span></span>
+            <span class="stat-badge percent-badge">🎯 <span id="percent-count">0%</span></span>
+        </div>
+    </div>
+
     <div class="question-text" id="question">Загрузка вопросов...</div>
     <div class="options-list" id="options"></div>
     <button class="next-btn" id="next-btn" onclick="nextQuestion()">Следующий вопрос</button>
 </div>
 
 <script>
-    // Безопасная инициализация Telegram WebApp
     let tg = null;
     if (window.Telegram && window.Telegram.WebApp) {
         tg = window.Telegram.WebApp;
@@ -27,9 +36,9 @@
 
     let questions = [];
     let currentQuestionIndex = 0;
-    let score = 0;
+    let correctAnswers = 0;
+    let wrongAnswers = 0;
 
-    // Загрузка базы вопросов с защитой от кэширования
     fetch('./questions.json?v=' + Date.now())
         .then(response => {
             if (!response.ok) {
@@ -38,25 +47,17 @@
             return response.json();
         })
         .then(data => {
-            // Очищаем базу от пустых строк
             questions = data.filter(q => q && q.question && q.options && q.options.length > 0);
-            
             if (questions.length === 0) {
-                document.getElementById('question').innerText = "База вопросов пуста или повреждена.";
+                document.getElementById('question').innerText = "База вопросов пуста.";
                 return;
             }
-            
-            // Перемешиваем случайным образом
+            // Перемешиваем базу
             questions.sort(() => Math.random() - 0.5);
-            
-            // Стартуем квиз
-            currentQuestionIndex = 0;
-            score = 0;
             showQuestion();
         })
         .catch(err => {
             document.getElementById('question').innerText = "Ошибка загрузки базы: " + err.message;
-            console.error(err);
         });
 
     function showQuestion() {
@@ -83,8 +84,7 @@
 
     function selectOption(selectedIndex, clickedButton) {
         let currentQuestion = questions[currentQuestionIndex];
-        const optionsContainer = document.getElementById('options');
-        const buttons = optionsContainer.getElementsByClassName('option-btn');
+        const buttons = document.getElementById('options').getElementsByClassName('option-btn');
         
         for (let btn of buttons) {
             btn.disabled = true;
@@ -92,17 +92,28 @@
         
         if (selectedIndex === currentQuestion.correct_option_index) {
             clickedButton.classList.add('correct');
-            score++;
+            correctAnswers++;
             if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         } else {
             clickedButton.classList.add('wrong');
             if (currentQuestion.correct_option_index >= 0 && currentQuestion.correct_option_index < buttons.length) {
                 buttons[currentQuestion.correct_option_index].classList.add('correct');
             }
+            wrongAnswers++;
             if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
         }
         
+        updateDashboard();
         document.getElementById('next-btn').style.display = 'block';
+    }
+
+    function updateDashboard() {
+        const totalAnswered = correctAnswers + wrongAnswers;
+        const percent = totalAnswered > 0 ? Math.round((correctAnswers / totalAnswered) * 100) : 0;
+        
+        document.getElementById('correct-count').innerText = correctAnswers;
+        document.getElementById('wrong-count').innerText = wrongAnswers;
+        document.getElementById('percent-count').innerText = percent + '%';
     }
 
     function nextQuestion() {
@@ -110,7 +121,9 @@
         if (currentQuestionIndex < questions.length) {
             showQuestion();
         } else {
-            document.getElementById('question').innerText = `Тест завершен! Результат: ${score} из ${questions.length}`;
+            const totalAnswered = correctAnswers + wrongAnswers;
+            const finalPercent = totalAnswered > 0 ? Math.round((correctAnswers / totalAnswered) * 100) : 0;
+            document.getElementById('question').innerText = `🏆 Тест завершен!\n\nРезультат: ${correctAnswers} из ${questions.length}\nТочность ответов: ${finalPercent}%`;
             document.getElementById('options').innerHTML = '';
             document.getElementById('next-btn').style.display = 'none';
         }
